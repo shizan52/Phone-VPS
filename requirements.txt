@@ -1,0 +1,3 @@
+﻿flask>=3.0        # the control panel (runs on the phone) and demo.py
+paramiko>=3.4     # only on your PC: deploy.py and tools/verify.py
+pillow>=10        # only to regenerate the pixel art: tools/make_pixel_art.py

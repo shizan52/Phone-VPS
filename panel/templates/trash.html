@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+{% block title %}Recycle Bin - Phone VPS{% endblock %}
+
+{% block content %}
+<style>
+    .trash-hero{
+        background:var(--glass);backdrop-filter:blur(20px);
+        border:1px solid var(--glass-border);border-radius:18px;
+        padding:28px;margin-bottom:24px;
+        position:relative;overflow:hidden;
+    }
+    .trash-hero::before{
+        content:'';position:absolute;top:0;left:0;right:0;height:2px;
+        background:linear-gradient(90deg,var(--orange),var(--red));
+    }
+    .trash-hero-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    .trash-hero h2{font-size:18px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:10px}
+    .trash-hero p{color:var(--text-secondary);font-size:13px;margin-top:6px}
+    .trash-count{
+        font-size:12px;color:var(--text-muted);
+        background:rgba(255,255,255,.05);
+        padding:4px 12px;border-radius:20px;
+        border:1px solid var(--glass-border);
+    }
+
+    .btn-empty{
+        background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(239,68,68,.08));
+        border:1px solid rgba(239,68,68,.25);
+        color:var(--red);font-size:13px;font-weight:600;
+        padding:10px 20px;border-radius:12px;cursor:pointer;
+        transition:all .2s;display:flex;align-items:center;gap:8px;
+    }
+    .btn-empty:hover{background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.4)}
+    .btn-empty:disabled{opacity:.4;cursor:not-allowed}
+
+    .trash-list{display:flex;flex-direction:column;gap:8px}
+
+    .trash-item{
+        background:var(--glass);backdrop-filter:blur(20px);
+        border:1px solid var(--glass-border);border-radius:14px;
+        padding:16px 20px;
+        display:flex;align-items:center;gap:16px;
+        transition:border-color .2s;
+    }
+    .trash-item:hover{border-color:var(--glass-border-hover)}
+
+    .trash-icon{
+        font-size:28px;width:48px;height:48px;flex-shrink:0;
+        display:flex;align-items:center;justify-content:center;
+        border-radius:12px;background:rgba(15,23,42,.6);
+        border:1px solid var(--glass-border);
+    }
+
+    .trash-info{flex:1;min-width:0}
+    .trash-name{
+        font-size:14px;font-weight:600;color:var(--text);
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .trash-meta{
+        font-size:11.5px;color:var(--text-muted);margin-top:3px;
+        display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+    }
+    .trash-meta .tag{
+        background:rgba(255,255,255,.05);padding:2px 8px;
+        border-radius:6px;border:1px solid var(--glass-border);
+        font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;
+    }
+    .trash-meta .tag.files{color:var(--cyan)}
+    .trash-meta .tag.websites{color:var(--purple)}
+
+    .trash-actions{display:flex;gap:8px;flex-shrink:0}
+    .btn-restore,.btn-perma-del{
+        padding:8px 16px;border-radius:10px;cursor:pointer;
+        font-size:12px;font-weight:600;border:1px solid;
+        transition:all .2s;display:flex;align-items:center;gap:6px;
+    }
+    .btn-restore{
+        background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.2);color:var(--green);
+    }
+    .btn-restore:hover{background:rgba(34,197,94,.2);border-color:rgba(34,197,94,.35)}
+    .btn-perma-del{
+        background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.15);color:var(--red);
+    }
+    .btn-perma-del:hover{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.3)}
+
+    .trash-empty-state{
+        text-align:center;padding:60px 20px;
+        color:var(--text-muted);
+    }
+    .trash-empty-state .icon{font-size:56px;margin-bottom:16px;opacity:.4}
+    .trash-empty-state h3{font-size:16px;color:var(--text-secondary);margin-bottom:6px}
+    .trash-empty-state p{font-size:13px}
+
+    /* Confirm modal */
+    .modal-overlay{
+        position:fixed;inset:0;background:rgba(0,0,0,.6);
+        backdrop-filter:blur(8px);z-index:999;
+        display:none;align-items:center;justify-content:center;
+    }
+    .modal-overlay.show{display:flex}
+    .modal-box{
+        background:var(--bg-secondary);border:1px solid var(--glass-border);
+        border-radius:18px;padding:28px;max-width:380px;width:90%;
+        text-align:center;
+    }
+    .modal-box h3{color:var(--text);font-size:16px;margin-bottom:8px}
+    .modal-box p{color:var(--text-secondary);font-size:13px;margin-bottom:20px;line-height:1.5}
+    .modal-btns{display:flex;gap:10px;justify-content:center}
+    .modal-btns button{
+        padding:10px 24px;border-radius:12px;font-size:13px;font-weight:600;
+        cursor:pointer;border:1px solid;transition:all .2s;
+    }
+    .btn-cancel{
+        background:var(--glass);border-color:var(--glass-border);color:var(--text-secondary);
+    }
+    .btn-cancel:hover{background:rgba(255,255,255,.08)}
+    .btn-confirm-del{
+        background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.3);color:var(--red);
+    }
+    .btn-confirm-del:hover{background:rgba(239,68,68,.3)}
+
+    @media(max-width:600px){
+        .trash-item{flex-wrap:wrap}
+        .trash-actions{width:100%;justify-content:flex-end}
+    }
+</style>
+
+<div class="page-header">
+    <h1>🗑️ Recycle Bin</h1>
+</div>
+
+<div class="trash-hero">
+    <div class="trash-hero-top">
+        <div>
+            <h2>🗑️ Deleted Items</h2>
+            <p>Files moved to trash can be restored or permanently deleted</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+            <span class="trash-count" id="trashCount">0 items</span>
+            <button class="btn-empty" id="btnEmpty" onclick="confirmEmpty()" disabled>
+                🧹 Empty Trash
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="trash-list" id="trashList">
+    <div class="trash-empty-state" id="emptyState">
+        <div class="icon">🗑️</div>
+        <h3>Trash is empty</h3>
+        <p>Deleted files and folders will appear here</p>
+    </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+        <h3 id="modalTitle">Confirm</h3>
+        <p id="modalMsg"></p>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            <button class="btn-confirm-del" id="modalConfirmBtn" onclick="modalConfirmAction()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let _modalAction = null;
+
+function toast(msg, type='info') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => t.className = 'toast', 3000);
+}
+
+function formatSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024, sizes = ['B','KB','MB','GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function fileIcon(name, isDir) {
+    if (isDir) return '📁';
+    const ext = name.split('.').pop().toLowerCase();
+    const map = {
+        jpg:'🖼️', jpeg:'🖼️', png:'🖼️', gif:'🖼️', webp:'🖼️', svg:'🖼️',
+        mp4:'🎬', mkv:'🎬', avi:'🎬', mov:'🎬',
+        mp3:'🎵', wav:'🎵', flac:'🎵', ogg:'🎵',
+        pdf:'📄', doc:'📝', docx:'📝', txt:'📝',
+        zip:'📦', rar:'📦', '7z':'📦', tar:'📦', gz:'📦',
+        html:'🌐', css:'🎨', js:'⚡', py:'🐍', json:'📋',
+    };
+    return map[ext] || '📄';
+}
+
+async function loadTrash() {
+    try {
+        const r = await fetch('/api/trash/list');
+        const data = await r.json();
+        renderTrash(data.items || []);
+    } catch(e) {
+        toast('Failed to load trash', 'error');
+    }
+}
+
+function renderTrash(items) {
+    const list = document.getElementById('trashList');
+    const countEl = document.getElementById('trashCount');
+    const btnEmpty = document.getElementById('btnEmpty');
+    const emptyState = document.getElementById('emptyState');
+
+    countEl.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+    btnEmpty.disabled = items.length === 0;
+
+    if (items.length === 0) {
+        list.innerHTML = '';
+        list.appendChild(emptyState);
+        emptyState.style.display = '';
+        return;
+    }
+
+    // Sort newest first
+    items.sort((a, b) => b.deleted_at.localeCompare(a.deleted_at));
+
+    let html = '';
+    for (const item of items) {
+        const icon = fileIcon(item.original_name, item.is_dir);
+        const section = item.section;
+        html += `
+        <div class="trash-item" data-id="${item.id}">
+            <div class="trash-icon">${icon}</div>
+            <div class="trash-info">
+                <div class="trash-name" title="${item.original_name}">${item.original_name}</div>
+                <div class="trash-meta">
+                    <span class="tag ${section}">${section}</span>
+                    <span>${item.original_path}</span>
+                    <span>•</span>
+                    <span>${formatSize(item.size)}</span>
+                    <span>•</span>
+                    <span>${item.deleted_at}</span>
+                </div>
+            </div>
+            <div class="trash-actions">
+                <button class="btn-restore" onclick="restoreItem('${item.id}','${item.original_name}')">
+                    ↩️ Restore
+                </button>
+                <button class="btn-perma-del" onclick="confirmDelete('${item.id}','${item.original_name}')">
+                    ✕
+                </button>
+            </div>
+        </div>`;
+    }
+    list.innerHTML = html;
+}
+
+async function restoreItem(id, name) {
+    try {
+        const r = await fetch('/api/trash/restore', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({id})
+        });
+        const data = await r.json();
+        if (data.ok) {
+            toast('Restored: ' + name, 'success');
+            loadTrash();
+        } else {
+            toast(data.error || 'Restore failed', 'error');
+        }
+    } catch(e) {
+        toast('Restore failed', 'error');
+    }
+}
+
+function confirmDelete(id, name) {
+    document.getElementById('modalTitle').textContent = 'Permanently Delete?';
+    document.getElementById('modalMsg').textContent = `"${name}" will be permanently deleted. This cannot be undone.`;
+    document.getElementById('modalConfirmBtn').textContent = '🗑️ Delete Forever';
+    _modalAction = async () => {
+        try {
+            const r = await fetch('/api/trash/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id})
+            });
+            const data = await r.json();
+            if (data.ok) {
+                toast('Permanently deleted: ' + name, 'success');
+                loadTrash();
+            } else {
+                toast(data.error || 'Delete failed', 'error');
+            }
+        } catch(e) {
+            toast('Delete failed', 'error');
+        }
+        closeModal();
+    };
+    document.getElementById('confirmModal').classList.add('show');
+}
+
+function confirmEmpty() {
+    document.getElementById('modalTitle').textContent = 'Empty Trash?';
+    document.getElementById('modalMsg').textContent = 'All items in trash will be permanently deleted. This cannot be undone.';
+    document.getElementById('modalConfirmBtn').textContent = '🧹 Empty All';
+    _modalAction = async () => {
+        try {
+            const r = await fetch('/api/trash/empty', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            });
+            const data = await r.json();
+            if (data.ok) {
+                toast('Trash emptied', 'success');
+                loadTrash();
+            } else {
+                toast(data.error || 'Failed', 'error');
+            }
+        } catch(e) {
+            toast('Failed to empty trash', 'error');
+        }
+        closeModal();
+    };
+    document.getElementById('confirmModal').classList.add('show');
+}
+
+function modalConfirmAction() {
+    if (_modalAction) _modalAction();
+}
+
+function closeModal() {
+    document.getElementById('confirmModal').classList.remove('show');
+    _modalAction = null;
+}
+
+// Close modal on overlay click
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+// Load on page ready
+loadTrash();
+</script>
+{% endblock %}

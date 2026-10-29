@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Phone VPS{% endblock %}
+
+{% block content %}
+<style>
+    .dash-hero{
+        background:var(--glass);
+        backdrop-filter:blur(20px);
+        border:1px solid var(--glass-border);
+        border-radius:18px;padding:24px 28px;
+        margin-bottom:24px;
+        display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+        position:relative;overflow:hidden;
+    }
+    .dash-hero::before{
+        content:'';position:absolute;top:0;left:0;right:0;height:2px;
+        background:linear-gradient(90deg,var(--cyan),var(--purple),var(--blue));
+    }
+    .dash-hero-info h2{
+        font-size:20px;font-weight:700;
+        display:flex;align-items:center;gap:10px;
+    }
+    .dash-hero-info h2 .icon-3d{
+        display:inline-flex;align-items:center;justify-content:center;
+        width:38px;height:38px;border-radius:12px;
+        background:linear-gradient(135deg,rgba(6,182,212,.15),rgba(168,85,247,.1));
+        font-size:20px;
+    }
+    .dash-hero-sub{
+        color:var(--text-muted);font-size:13px;margin-top:4px;
+        word-break:break-all;
+    }
+
+    /* Stat cards with gradient borders */
+    .stat-card{
+        background:var(--glass);
+        backdrop-filter:blur(20px);
+        border:1px solid var(--glass-border);
+        border-radius:16px;padding:20px 18px;
+        text-align:center;position:relative;overflow:hidden;
+        transition:all .3s cubic-bezier(.4,0,.2,1);
+    }
+    .stat-card:hover{
+        transform:translateY(-5px) scale(1.02);
+        box-shadow:0 15px 35px rgba(0,0,0,.3);
+        border-color:var(--glass-border-hover);
+    }
+    .stat-card .accent-line{
+        position:absolute;top:0;left:20%;right:20%;height:2px;
+        border-radius:0 0 2px 2px;opacity:.6;
+    }
+    .stat-card:nth-child(1) .accent-line{background:var(--cyan)}
+    .stat-card:nth-child(2) .accent-line{background:var(--purple)}
+    .stat-card:nth-child(3) .accent-line{background:var(--blue)}
+    .stat-card:nth-child(4) .accent-line{background:var(--green)}
+    .stat-card:nth-child(5) .accent-line{background:var(--orange)}
+    .stat-card:nth-child(6) .accent-line{background:var(--pink)}
+
+    .stat-icon{
+        width:48px;height:48px;border-radius:14px;
+        display:inline-flex;align-items:center;justify-content:center;
+        font-size:24px;margin-bottom:12px;
+    }
+    .stat-card:nth-child(1) .stat-icon{background:linear-gradient(135deg,rgba(6,182,212,.15),rgba(6,182,212,.05))}
+    .stat-card:nth-child(2) .stat-icon{background:linear-gradient(135deg,rgba(168,85,247,.15),rgba(168,85,247,.05))}
+    .stat-card:nth-child(3) .stat-icon{background:linear-gradient(135deg,rgba(59,130,246,.15),rgba(59,130,246,.05))}
+    .stat-card:nth-child(4) .stat-icon{background:linear-gradient(135deg,rgba(34,197,94,.15),rgba(34,197,94,.05))}
+    .stat-card:nth-child(5) .stat-icon{background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05))}
+    .stat-card:nth-child(6) .stat-icon{background:linear-gradient(135deg,rgba(236,72,153,.15),rgba(236,72,153,.05))}
+
+    /* Usage panels */
+    .usage-panel{
+        background:var(--glass);
+        backdrop-filter:blur(20px);
+        border:1px solid var(--glass-border);
+        border-radius:16px;padding:24px;
+        position:relative;overflow:hidden;
+    }
+    .usage-panel .usage-title{
+        display:flex;align-items:center;gap:10px;
+        font-size:14px;font-weight:600;color:var(--text-secondary);
+        margin-bottom:8px;
+    }
+    .usage-pct{
+        font-size:36px;font-weight:800;
+        background:linear-gradient(135deg,var(--text),var(--text-secondary));
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+        line-height:1.1;
+    }
+    .usage-bar{
+        height:8px;border-radius:6px;
+        background:rgba(15,23,42,.6);
+        border:1px solid var(--glass-border);
+        overflow:hidden;margin:12px 0 8px;
+    }
+    .usage-bar-fill{
+        height:100%;border-radius:6px;
+        transition:width .8s cubic-bezier(.4,0,.2,1);
+        position:relative;
+    }
+    .usage-bar-fill::after{
+        content:'';position:absolute;inset:0;
+        background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);
+        animation:shimmer 2s infinite;
+    }
+    .usage-bar-fill.ram{background:linear-gradient(90deg,var(--purple),var(--pink))}
+    .usage-bar-fill.storage{background:linear-gradient(90deg,var(--orange),var(--red))}
+
+    /* Credential cards */
+    .cred-card{
+        background:rgba(15,23,42,.6);
+        border:1px solid var(--glass-border);
+        border-radius:12px;padding:18px;
+        display:flex;justify-content:space-between;align-items:center;
+        transition:border-color .2s;
+    }
+    .cred-card:hover{border-color:rgba(6,182,212,.2)}
+
+    /* Tunnel box */
+    .tunnel-card{
+        background:linear-gradient(135deg,rgba(6,182,212,.06),rgba(168,85,247,.04));
+        border:1px solid rgba(6,182,212,.15);
+        border-radius:16px;padding:22px;margin-bottom:20px;
+    }
+    .tunnel-card .tunnel-url{
+        color:var(--cyan);font-size:14px;
+        word-break:break-all;font-weight:600;
+    }
+
+    /* Action buttons enhanced */
+    .action-grid{
+        display:flex;gap:12px;flex-wrap:wrap;
+    }
+    .action-btn{
+        display:inline-flex;align-items:center;gap:8px;
+        padding:12px 24px;border:none;border-radius:12px;
+        font-size:13px;font-weight:600;cursor:pointer;
+        color:white;position:relative;overflow:hidden;
+        transition:all .25s cubic-bezier(.4,0,.2,1);
+    }
+    .action-btn::after{
+        content:'';position:absolute;inset:0;
+        background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
+        transform:translateX(-100%);transition:transform .45s;
+    }
+    .action-btn:hover{transform:translateY(-3px)}
+    .action-btn:hover::after{transform:translateX(100%)}
+    .action-btn:active{transform:translateY(0) scale(.97)}
+    .action-btn.start{background:linear-gradient(135deg,#22c55e,#16a34a);box-shadow:0 4px 20px rgba(34,197,94,.25)}
+    .action-btn.stop{background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 20px rgba(239,68,68,.25)}
+    .action-btn.reboot{background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 20px rgba(245,158,11,.25)}
+    .action-btn.refresh{background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 20px rgba(59,130,246,.25)}
+
+    /* Services enhanced */
+    .svc-row{
+        display:flex;justify-content:space-between;align-items:center;
+        padding:14px 16px;margin:4px 0;
+        border-radius:12px;
+        background:rgba(15,23,42,.3);
+        border:1px solid transparent;
+        transition:all .2s;
+    }
+    .svc-row:hover{
+        background:rgba(15,23,42,.5);
+        border-color:var(--glass-border);
+    }
+    .svc-name{font-weight:600;font-size:14px}
+    .svc-port{color:var(--text-muted);font-size:11px;margin-top:2px}
+    .svc-right{display:flex;align-items:center;gap:10px}
+    .svc-badge{
+        padding:4px 14px;border-radius:20px;
+        font-size:10px;font-weight:700;letter-spacing:.5px;
+    }
+    .svc-badge.running{
+        background:rgba(34,197,94,.1);color:var(--green);
+        box-shadow:0 0 12px rgba(34,197,94,.1);
+    }
+    .svc-badge.stopped{background:rgba(239,68,68,.1);color:var(--red)}
+    .svc-btn{
+        padding:5px 14px;border:1px solid var(--glass-border);
+        background:rgba(255,255,255,.04);
+        color:var(--text-secondary);border-radius:8px;
+        cursor:pointer;font-size:11px;font-weight:500;
+        transition:all .2s;
+    }
+    .svc-btn:hover{background:rgba(255,255,255,.08);color:var(--text)}
+
+    @media(max-width:768px){
+        .dash-hero{padding:18px 16px}
+        .dash-hero-info h2{font-size:17px}
+        .usage-pct{font-size:28px}
+        .action-btn{padding:10px 18px;font-size:12px}
+    }
+</style>
+
+<div class="page-header">
+    <h1>📊 Dashboard</h1>
+    <div id="statusBadge" class="status-badge online">
+        <span class="status-dot"></span> ONLINE
+    </div>
+</div>
+
+<!-- Hero -->
+<div class="dash-hero">
+    <div class="dash-hero-info">
+        <h2><span class="icon-3d">📱</span> <span id="vpName">Phone VPS</span></h2>
+        <div class="dash-hero-sub" id="vpSub">Loading...</div>
+    </div>
+    <div id="statusBadge2" class="status-badge online">
+        <span class="status-dot"></span> ONLINE
+    </div>
+</div>
+
+<!-- Info Cards -->
+<div class="card-grid" id="infoCards">
+    <div class="stat-card">
+        <div class="accent-line"></div>
+        <div class="stat-icon">🌐</div>
+        <div class="card-label">IP Address</div>
+        <div class="card-value" id="cardIP">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="accent-line"></div>
+        <div class="stat-icon">💾</div>
+        <div class="card-label">Memory</div>
+        <div class="card-value" id="cardRAM">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="accent-line"></div>
+        <div class="stat-icon">⚡</div>
+        <div class="card-label">CPU</div>
+        <div class="card-value" id="cardCPU">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="accent-line"></div>
+        <div class="stat-icon">🖥️</div>
+        <div class="card-label">OS</div>
+        <div class="card-value" id="cardOS">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="accent-line"></div>
+        <div class="stat-icon">🛡️</div>
+        <div class="card-label">VPS Status</div>
+        <div class="card-value" id="cardStatus" style="color:var(--green)">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="accent-line"></div>
+        <div class="stat-icon">⏱️</div>
+        <div class="card-label">Uptime</div>
+        <div class="card-value" id="cardUptime">-</div>
+    </div>
+</div>
+
+<!-- RAM & Storage -->
+<div class="two-cols" style="margin-bottom:20px;">
+    <div class="usage-panel">
+        <div class="usage-title">💾 RAM Usage</div>
+        <div class="usage-pct" id="ramUsageLabel">-</div>
+        <div class="usage-bar">
+            <div class="usage-bar-fill ram" id="ramBar" style="width:0%"></div>
+        </div>
+        <div class="progress-label">
+            <span id="ramUsed">-</span>
+            <span id="ramTotal">-</span>
+        </div>
+    </div>
+    <div class="usage-panel">
+        <div class="usage-title">📦 Storage</div>
+        <div class="usage-pct" id="storageUsageLabel">-</div>
+        <div class="usage-bar">
+            <div class="usage-bar-fill storage" id="storageBar" style="width:0%"></div>
+        </div>
+        <div class="progress-label">
+            <span id="storageUsed">-</span>
+            <span id="storageTotal">-</span>
+        </div>
+    </div>
+</div>
+
+<!-- Credentials -->
+<div class="cred-grid">
+    <div class="cred-card">
+        <div>
+            <div class="cred-label">Username</div>
+            <div class="cred-value" id="sshUser">-</div>
+        </div>
+        <button class="copy-btn" onclick="copyText(document.getElementById('sshUser').textContent)">📋</button>
+    </div>
+    <div class="cred-card">
+        <div>
+            <div class="cred-label">Password</div>
+            <div class="cred-value" id="sshPass">-</div>
+        </div>
+        <button class="copy-btn" onclick="copyText(document.getElementById('sshPass').textContent)">📋</button>
+    </div>
+</div>
+
+<!-- Tunnel URL -->
+<div class="tunnel-card" id="tunnelBox" style="display:none;">
+    <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px;">🌍 Remote Access</div>
+    <div class="cred-card">
+        <div style="flex:1;">
+            <div class="cred-label">Public URL (access from anywhere)</div>
+            <div class="tunnel-url" id="tunnelUrl">-</div>
+        </div>
+        <button class="copy-btn" onclick="copyText(document.getElementById('tunnelUrl').textContent)">📋</button>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="panel-box">
+    <div class="action-grid">
+        <button class="action-btn start" onclick="apiPost('/api/start-all').then(refreshStatus)">▶ Start</button>
+        <button class="action-btn stop" onclick="stopAll()">⏹ Stop</button>
+        <button class="action-btn reboot" onclick="apiPost('/api/reboot').then(()=>setTimeout(refreshStatus,3000))">🔄 Reboot</button>
+        <button class="action-btn refresh" onclick="refreshStatus()">🔃 Refresh</button>
+    </div>
+</div>
+
+<!-- Services -->
+<div class="panel-box">
+    <div class="panel-box-title">⚙️ Services</div>
+    <div id="serviceList">Loading...</div>
+</div>
+
+<!-- Footer -->
+<div class="footer-status" id="footerMsg">Loading status...</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let statusData = null;
+
+async function refreshStatus() {
+    try {
+        const res = await fetch('/api/status');
+        statusData = await res.json();
+        render(statusData);
+        document.getElementById('footerMsg').textContent = 'Connected! VPS status loaded.';
+        document.getElementById('footerMsg').style.color = 'var(--green)';
+    } catch (err) {
+        document.getElementById('footerMsg').textContent = 'Connection failed!';
+        document.getElementById('footerMsg').style.color = 'var(--red)';
+    }
+}
+
+function render(d) {
+    document.getElementById('vpName').textContent = d.hostname;
+    document.getElementById('vpSub').textContent = d.ip + ' · ' + d.memory.total_mb + ' MB RAM · Active';
+
+    document.getElementById('cardIP').textContent = d.ip;
+    document.getElementById('cardRAM').textContent = d.memory.total_mb + ' MB';
+    document.getElementById('cardCPU').textContent = d.cpu.cores + ' Core';
+    document.getElementById('cardOS').textContent = d.os;
+    document.getElementById('cardStatus').textContent = 'Active';
+    document.getElementById('cardUptime').textContent = d.uptime;
+
+    document.getElementById('ramUsageLabel').textContent = d.memory.percent + '%';
+    document.getElementById('ramBar').style.width = d.memory.percent + '%';
+    document.getElementById('ramUsed').textContent = d.memory.used_mb + ' MB used';
+    document.getElementById('ramTotal').textContent = d.memory.total_mb + ' MB total';
+
+    document.getElementById('storageUsageLabel').textContent = d.storage.percent + '%';
+    document.getElementById('storageBar').style.width = d.storage.percent + '%';
+    document.getElementById('storageUsed').textContent = d.storage.used_gb + ' GB used';
+    document.getElementById('storageTotal').textContent = d.storage.total_gb + ' GB total';
+
+    document.getElementById('sshUser').textContent = d.ssh_user || 'user';
+    document.getElementById('sshPass').textContent = d.ssh_password;
+
+    if (d.tunnel && d.tunnel.running && d.tunnel.url) {
+        document.getElementById('tunnelBox').style.display = 'block';
+        document.getElementById('tunnelUrl').textContent = d.tunnel.url;
+    } else {
+        document.getElementById('tunnelBox').style.display = 'none';
+    }
+
+    let html = '';
+    for (const [name, svc] of Object.entries(d.services)) {
+        const running = svc.running;
+        html += `
+        <div class="svc-row">
+            <div>
+                <div class="svc-name">${name.toUpperCase()}</div>
+                <div class="svc-port">Port: ${svc.port} ${svc.pid ? '· PID: '+svc.pid : ''}</div>
+            </div>
+            <div class="svc-right">
+                <span class="svc-badge ${running ? 'running' : 'stopped'}">${running ? 'RUNNING' : 'STOPPED'}</span>
+                ${name !== 'panel' ? `
+                <button class="svc-btn" onclick="toggleService('${name}', ${running})">${running ? 'Stop' : 'Start'}</button>
+                ` : ''}
+            </div>
+        </div>`;
+    }
+    document.getElementById('serviceList').innerHTML = html;
+}
+
+async function toggleService(name, isRunning) {
+    await apiPost(`/api/service/${name}/${isRunning ? 'stop' : 'start'}`);
+    setTimeout(refreshStatus, 1500);
+}
+
+async function stopAll() {
+    await apiPost('/api/stop-all');
+    setTimeout(refreshStatus, 1500);
+}
+
+refreshStatus();
+setInterval(refreshStatus, 10000);
+</script>
+{% endblock %}

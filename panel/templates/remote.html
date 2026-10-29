@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}Remote Access - Phone VPS{% endblock %}
+
+{% block content %}
+<style>
+    .remote-hero{
+        background:var(--glass);backdrop-filter:blur(20px);
+        border:1px solid var(--glass-border);border-radius:18px;
+        padding:28px;margin-bottom:24px;
+        position:relative;overflow:hidden;
+    }
+    .remote-hero::before{
+        content:'';position:absolute;top:0;left:0;right:0;height:2px;
+        background:linear-gradient(90deg,var(--cyan),var(--purple));
+    }
+    .remote-hero p{color:var(--text-secondary);font-size:14px;margin-bottom:18px;line-height:1.6}
+    .tunnel-url-box{
+        background:rgba(6,182,212,.05);
+        border:1px solid rgba(6,182,212,.15);
+        border-radius:14px;padding:18px;margin-bottom:18px;
+    }
+    .tunnel-url-text{
+        color:var(--cyan);font-size:15px;font-weight:600;
+        word-break:break-all;
+    }
+
+    .conn-card{
+        background:var(--glass);backdrop-filter:blur(20px);
+        border:1px solid var(--glass-border);border-radius:14px;
+        padding:22px;position:relative;overflow:hidden;
+        transition:border-color .2s;
+    }
+    .conn-card:hover{border-color:var(--glass-border-hover)}
+    .conn-card::before{
+        content:'';position:absolute;top:0;left:20%;right:20%;height:2px;
+        border-radius:0 0 2px 2px;
+    }
+    .conn-card.web::before{background:var(--cyan)}
+    .conn-card.ssh::before{background:var(--purple)}
+    .conn-card h4{
+        color:var(--cyan);margin-bottom:10px;font-size:15px;
+        display:flex;align-items:center;gap:8px;
+    }
+    .conn-card p{color:var(--text-secondary);font-size:13px;margin-bottom:14px;line-height:1.5}
+
+    .how-item{
+        display:flex;align-items:flex-start;gap:14px;
+        padding:14px 0;
+        border-bottom:1px solid var(--glass-border);
+        color:var(--text-secondary);font-size:14px;line-height:1.7;
+    }
+    .how-item:last-child{border-bottom:none}
+    .how-icon{
+        font-size:22px;flex-shrink:0;
+        width:42px;height:42px;
+        display:flex;align-items:center;justify-content:center;
+        border-radius:12px;
+        background:rgba(15,23,42,.6);
+        border:1px solid var(--glass-border);
+    }
+    .how-text strong{color:var(--text)}
+</style>
+
+<div class="page-header">
+    <h1>🌍 Remote Access</h1>
+    <div id="tunnelBadge" class="status-badge offline">
+        <span class="status-dot"></span> <span id="tunnelBadgeText">OFFLINE</span>
+    </div>
+</div>
+
+<!-- Tunnel Control -->
+<div class="remote-hero">
+    <div class="panel-box-title">☁️ Cloudflare Tunnel</div>
+    <p>Create a secure tunnel to access your VPS from any device, any network, anywhere in the world.</p>
+    <div id="tunnelUrlBox" style="display:none; margin-bottom:18px;">
+        <div class="tunnel-url-box">
+            <div class="cred-box" style="background:transparent;border:none;padding:0;">
+                <div style="flex:1;">
+                    <div class="cred-label">Public URL</div>
+                    <div class="tunnel-url-text" id="tunnelUrl">-</div>
+                </div>
+                <button class="copy-btn" onclick="copyText(document.getElementById('tunnelUrl').textContent)" style="font-size:16px">📋</button>
+            </div>
+        </div>
+    </div>
+    <div class="btn-row">
+        <button class="btn btn-green" id="btnStartTunnel" onclick="startTunnel()">▶ Start Tunnel</button>
+        <button class="btn btn-red" id="btnStopTunnel" onclick="stopTunnel()" style="display:none;">⏹ Stop Tunnel</button>
+        <button class="btn btn-blue" onclick="refreshTunnel()">🔃 Refresh</button>
+    </div>
+</div>
+
+<!-- Connection Info -->
+<div class="panel-box" style="margin-bottom:20px;">
+    <div class="panel-box-title">📡 Connection Information</div>
+    <div class="two-cols">
+        <div class="conn-card web">
+            <h4>🌐 Web Panel</h4>
+            <p>Open the Public URL in any browser to access the control panel remotely.</p>
+            <div class="cred-box" style="margin-bottom:0;">
+                <div>
+                    <div class="cred-label">URL</div>
+                    <div class="cred-value" id="webUrl" style="font-size:12px;">Start tunnel first</div>
+                </div>
+                <button class="copy-btn" onclick="copyText(document.getElementById('webUrl').textContent)">📋</button>
+            </div>
+        </div>
+        <div class="conn-card ssh">
+            <h4>🔑 SSH Access</h4>
+            <p>SSH is available on the local network:</p>
+            <div class="cred-box" style="margin-bottom:0;">
+                <div>
+                    <div class="cred-label">Command</div>
+                    <div class="cred-value" id="sshCmd" style="font-size:12px;font-family:monospace;">ssh user@... -p 8022</div>
+                </div>
+                <button class="copy-btn" onclick="copyText(document.getElementById('sshCmd').textContent)">📋</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Credentials -->
+<div class="panel-box" style="margin-bottom:20px;">
+    <div class="panel-box-title">🔐 Login Credentials</div>
+    <div class="cred-grid">
+        <div class="cred-box">
+            <div>
+                <div class="cred-label">Username</div>
+                <div class="cred-value" id="sshUser">-</div>
+            </div>
+            <button class="copy-btn" onclick="copyText(document.getElementById('sshUser').textContent)">📋</button>
+        </div>
+        <div class="cred-box">
+            <div>
+                <div class="cred-label">Password</div>
+                <div class="cred-value" id="sshPass">-</div>
+            </div>
+            <button class="copy-btn" onclick="copyText(document.getElementById('sshPass').textContent)">📋</button>
+        </div>
+    </div>
+</div>
+
+<!-- How it works -->
+<div class="panel-box">
+    <div class="panel-box-title">💡 How It Works</div>
+    <div class="how-item">
+        <div class="how-icon">📡</div>
+        <div class="how-text"><strong>Cloudflare Tunnel</strong> creates a secure outbound connection from your phone to Cloudflare's global network.</div>
+    </div>
+    <div class="how-item">
+        <div class="how-icon">🔒</div>
+        <div class="how-text">All traffic is <strong>encrypted end-to-end</strong> via HTTPS.</div>
+    </div>
+    <div class="how-item">
+        <div class="how-icon">🌐</div>
+        <div class="how-text">No port forwarding or static IP required — works behind <strong>any NAT/firewall</strong>.</div>
+    </div>
+    <div class="how-item">
+        <div class="how-icon">📱</div>
+        <div class="how-text">Access from <strong>any device</strong> with a web browser — phone, tablet, laptop, anywhere.</div>
+    </div>
+    <div class="how-item">
+        <div class="how-icon">⚡</div>
+        <div class="how-text">The tunnel URL is <strong>permanent</strong> — <code style="color:var(--cyan)">your tunnel hostname</code> always points to your phone.</div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function refreshTunnel() {
+    try {
+        const res = await fetch('/api/tunnel');
+        const d = await res.json();
+        const badge = document.getElementById('tunnelBadge');
+        const badgeText = document.getElementById('tunnelBadgeText');
+        const urlBox = document.getElementById('tunnelUrlBox');
+        const btnStart = document.getElementById('btnStartTunnel');
+        const btnStop = document.getElementById('btnStopTunnel');
+
+        if (d.running && d.url) {
+            badge.className = 'status-badge online';
+            badgeText.textContent = 'ACTIVE';
+            urlBox.style.display = 'block';
+            document.getElementById('tunnelUrl').textContent = d.url;
+            document.getElementById('webUrl').textContent = d.url;
+            btnStart.style.display = 'none';
+            btnStop.style.display = 'inline-flex';
+        } else if (d.running) {
+            badge.className = 'status-badge online';
+            badgeText.textContent = 'STARTING...';
+            urlBox.style.display = 'none';
+            btnStart.style.display = 'none';
+            btnStop.style.display = 'inline-flex';
+        } else {
+            badge.className = 'status-badge offline';
+            badgeText.textContent = 'OFFLINE';
+            urlBox.style.display = 'none';
+            document.getElementById('webUrl').textContent = 'Start tunnel first';
+            btnStart.style.display = 'inline-flex';
+            btnStop.style.display = 'none';
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function startTunnel() {
+    document.getElementById('btnStartTunnel').textContent = '⏳ Starting...';
+    document.getElementById('btnStartTunnel').disabled = true;
+    try {
+        const res = await fetch('/api/tunnel/start', {method: 'POST'});
+        const d = await res.json();
+        if (d.url) {
+            showToast('Tunnel started! URL copied.');
+            copyText(d.url);
+        } else {
+            showToast(d.msg);
+        }
+    } catch (err) {
+        showToast('Failed to start tunnel', true);
+    }
+    document.getElementById('btnStartTunnel').textContent = '▶ Start Tunnel';
+    document.getElementById('btnStartTunnel').disabled = false;
+    refreshTunnel();
+}
+
+async function stopTunnel() {
+    await apiPost('/api/tunnel/stop');
+    refreshTunnel();
+}
+
+fetch('/api/status').then(r => r.json()).then(d => {
+    document.getElementById('sshCmd').textContent = 'ssh ' + d.ssh_user + '@' + d.ip + ' -p ' + d.ssh_port;
+    document.getElementById('sshUser').textContent = d.ssh_user;
+    document.getElementById('sshPass').textContent = d.ssh_password;
+});
+
+refreshTunnel();
+setInterval(refreshTunnel, 10000);
+</script>
+{% endblock %}

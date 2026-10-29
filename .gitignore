@@ -1,0 +1,36 @@
+# ---------------------------------------------------------------
+# Secrets and private runtime data - never commit
+# ---------------------------------------------------------------
+.env
+.env.*
+tunnel_token.txt
+tunnel_url.txt
+panel.json
+locks.json
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Real files that live on the phone, not in this repo
+vps/
+*.db
+*.log
+
+# Local knowledge-graph tooling (graphify) and assistant config
+graphify-out/
+.graphifyignore
+CLAUDE.md
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
